@@ -1,0 +1,36 @@
+# JavaScript dependencies and package-manager state
+node_modules/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Generated desktop packages and build output
+dist/
+build/
+out/
+release/
+
+# Local recordings and temporary output
+recordings/
+captures/
+*.webm
+*.tmp
+*.log
+
+# Local configuration and editor/OS files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test MediaPipe FaceLandmarker</title>
+</head>
+<body>
+    <div id="status">Initializing...</div>
+    <script type="module">
+        import { FaceLandmarker, FilesetResolver } from '/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs';
+
+        async function init() {
+            try {
+                const fileset = await FilesetResolver.forVisionTasks('/node_modules/@mediapipe/tasks-vision/wasm');
+                const landmarker = await FaceLandmarker.createFromOptions(fileset, {
+                    baseOptions: {
+                        modelAssetPath: '/models/face_landmarker.task',
+                        delegate: 'GPU'
+                    },
+                    outputFaceBlendshapes: true,
+                    outputFacialTransformationMatrixes: true,
+                    runningMode: 'VIDEO',
+                    numFaces: 1
+                });
+                document.getElementById('status').innerText = 'MediaPipe FaceLandmarker GPU Ready!';
+                console.log('FaceLandmarker successfully initialized:', landmarker);
+                window._landmarker = landmarker;
+            } catch (err) {
+                console.warn('GPU delegate failed, trying CPU...', err);
+                try {
+                    const fileset = await FilesetResolver.forVisionTasks('/node_modules/@mediapipe/tasks-vision/wasm');
+                    const landmarker = await FaceLandmarker.createFromOptions(fileset, {
+                        baseOptions: {
+                            modelAssetPath: '/models/face_landmarker.task',
+                            delegate: 'CPU'
+                        },
+                        outputFaceBlendshapes: true,
+                        outputFacialTransformationMatrixes: true,
+                        runningMode: 'VIDEO',
+                        numFaces: 1
+                    });
+                    document.getElementById('status').innerText = 'MediaPipe FaceLandmarker CPU Ready!';
+                    window._landmarker = landmarker;
+                } catch (e) {
+                    console.error('Fatal error initializing landmarker:', e);
+                    document.getElementById('status').innerText = 'Error: ' + e.message;
+                }
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

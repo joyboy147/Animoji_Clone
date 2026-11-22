@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MonkeyMoji GLB Viewer</title>
+    <style>
+        body { margin: 0; background: #1a1a2e; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #canvas { width: 100vw; height: 100vh; }
+        #info { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .stat { color: #4ade80; font-weight: bold; }
+    </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "/node_modules/three/build/three.module.js",
+            "three/addons/": "/node_modules/three/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="info">Loading MonkeyMoji model...</div>
+    <canvas id="canvas"></canvas>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const canvas = document.getElementById('canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 50);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        const ambLight = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        keyLight.position.set(15, 25, 30);
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0xffeedd, 0.9);
+        fillLight.position.set(-20, -10, 20);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xaaccff, 0.6);
+        rimLight.position.set(0, 35, 10);
+        scene.add(rimLight);
+
+        const loader = new GLTFLoader();
+        const info = document.getElementById('info');
+
+        loader.load('/assets/monkey/monkeymoji.glb', (gltf) => {
+            const avatar = gltf.scene;
+            scene.add(avatar);
+
+            const box = new THREE.Box3().setFromObject(avatar);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            avatar.position.sub(center);
+
+            let meshList = [];
+            let totalMorphs = 0;
+            let headMesh = null;
+
+            avatar.traverse((child) => {
+                if (child.isMesh) {
+                    const dict = child.morphTargetDictionary || {};
+                    const count = Object.keys(dict).length;
+                    totalMorphs += count;
+                    meshList.push(`${child.name} (${count} morphs)`);
+                    if (child.name === 'head') {
+                        headMesh = child;
+                    }
+                }
+            });
+
+            info.innerHTML = `
+                <h3 style="margin:0 0 8px 0; color:#60a5fa;">MonkeyMoji GLB</h3>
+                <div>Status: <span class="stat">Loaded Successfully!</span></div>
+                <div>Size: ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)}</div>
+                <div>Total Morph Targets: <span class="stat">${totalMorphs}</span></div>
+                <div>Meshes: ${meshList.join(', ')}</div>
+            `;
+
+            window._loaded = true;
+            window._head = headMesh;
+            
+avatar.traverse(c => {
+    if (c.isMesh) {
+        let col = 0xffffff;
+        if (c.name === 'head') col = 0xff0000;
+        else if (c.name === 'upperTeeth') col = 0xffff00;
+        else if (c.name === 'lowerTeeth') col = 0x00ffff;
+        else if (c.name === 'tongue') col = 0xff00ff;
+        else if (c.name.includes('eye')) col = 0x00ff00;
+        c.material = new THREE.MeshBasicMaterial({ color: col, wireframe: false, side: THREE.DoubleSide });
+    }
+});
+window._avatar = avatar;
+
+            // Optional test smile or mouth open
+            if (headMesh) {
+                // Add dark mouth cavity backing behind teeth
+                const mouthCavityGeom = new THREE.SphereGeometry(4.2, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+                const mouthCavityMat = new THREE.MeshBasicMaterial({ color: 0x1f0a0a, side: THREE.BackSide });
+                const mouthCavity = new THREE.Mesh(mouthCavityGeom, mouthCavityMat);
+                mouthCavity.position.set(0, 4.5, 6.0);
+                mouthCavity.scale.set(1.0, 0.8, 0.7);
+                avatar.add(mouthCavity);
+
+                // Test jaw open and smile
+                avatar.traverse(c => {
+                    if (c.isMesh && c.morphTargetDictionary) {
+                        if (c.morphTargetDictionary['jawOpen'] !== undefined) {
+                            c.morphTargetInfluences[c.morphTargetDictionary['jawOpen']] = 0.8;
+                        }
+                        if (c.morphTargetDictionary['mouthSmile_L'] !== undefined) {
+                            c.morphTargetInfluences[c.morphTargetDictionary['mouthSmile_L']] = 0.5;
+                            c.morphTargetInfluences[c.morphTargetDictionary['mouthSmile_R']] = 0.5;
+                        }
+                    }
+                    if (c.name === 'L_eye' && c.morphTargetDictionary && c.morphTargetDictionary['eyeBlink_L'] !== undefined) {
+                        c.morphTargetInfluences[c.morphTargetDictionary['eyeBlink_L']] = 0.0;
+                    }
+                });
+            }
+
+            console.log('GLB successfully loaded and ready!');
+        }, null, (err) => {
+            console.error('Error loading GLB:', err);
+            info.innerHTML = `<span style="color:#ef4444;">Error: ${err.message || err}</span>`;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

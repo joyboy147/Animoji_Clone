@@ -1,0 +1,20 @@
+{
+  "name": "monkeymoji",
+  "version": "1.0.0",
+  "description": "",
+  "main": "electron-main.cjs",
+  "scripts": {
+    "start": "electron --no-sandbox .",
+    "app": "electron --no-sandbox .",
+    "check": "node --check electron-main.cjs && node --check src/tracker.js && node --check src/app.js && node --check src/monkeymoji.js && node --check src/obs-output.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.2.0",
+    "three": "^0.187.0",
+    "electron": "^39.2.0"
+  }
+}
